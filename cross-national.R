@@ -7,6 +7,7 @@ library(dplyr)
 library(ggplot2)
 library(ggthemes)
 library(readxl)
+library(foreach)
 ######################################################################
 # Change Working Directorys
 ######################################################################
@@ -15,61 +16,89 @@ setwd("/Users/fumiyau/Dropbox (Princeton)/18.Covid19_CrossNational")
 ######################################################################
 # Data create
 ######################################################################
-
-usa <- read_excel("STMFinput/stmf.xlsx",sheet = "USA",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`)
-
-uk <- read_excel("STMFinput/stmf.xlsx",sheet = "GBRTENW",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-
-esp <- read_excel("STMFinput/stmf.xlsx",sheet = "ESP",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-
-ita <- read_excel("STMFinput/stmf.xlsx",sheet = "ITA",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-
-bel <- read_excel("STMFinput/stmf.xlsx",sheet = "BEL",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-
-nld <- read_excel("STMFinput/stmf.xlsx",sheet = "NLD",skip=2) %>% 
-  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-#swe <- read_excel("STMFinput/stmf.xlsx",sheet = "SWE",skip=2) %>% 
-#  dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
-#                r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`) 
-
-
-
-df <- bind_rows(usa,uk,esp,ita,bel,swe,nld) %>% 
-  filter(Year>2015 & Sex == "b") %>% 
+list <- excel_sheets("STMFinput/stmf.xlsx")[c(2:21)]
+All <- lapply(list,function(i){
+  read_excel("STMFinput/stmf.xlsx",sheet = i,skip=2) %>% 
+    dplyr::select(Country,Year,Week,Sex,r0=`0-14...11`,r15=`15-64...12`,r65=`65-74...13`,
+                  r75=`75-84...14`,r85=`85+...15`,rt=`Total...16`)
+})
+df_all <- do.call(bind_rows, All) %>% 
   mutate(Year=as.character(Year),
          rt=rt*1000,
          r85=r85*1000,
          r75=r75*1000,
-         r15=r15*1000,
-         excess85=r85/r15,
-         excess75=r75/r15)
+         r15=r15*1000) %>% 
+  filter(Country != "ISL" & Year>2014)  #ISL's mortality looks messy
 
-dff <- bind_rows(usa,uk,esp) %>% 
-  filter(Year>2015 & Sex == "f") %>% 
-  mutate(Year=as.character(Year),
-         rt=rt*1000,
-         r85=r85*1000,
-         r75=r75*1000,
-         r15=r15*1000,
-         excess85=r85/r15,
-         excess75=r75/r15)
+df_20162019 <- df_all %>%
+  filter(Year != "2020") %>% 
+  group_by(Country, Week, Sex) %>% 
+  summarise_at(c("r0", "r15","r65","r75","r85","rt"),mean) %>% 
+  mutate(Year="2015-2019")
+
+df <- df_all %>% 
+  filter(Year == "2020") %>% 
+  bind_rows(df_20162019) %>% 
+  mutate(  excess85=r85/r15,
+           excess75=r75/r15)
+
+dfb <- df %>% 
+  filter(Sex == "b") 
+
+dff <- df %>% 
+  filter(Sex == "f") 
+
+dfm <- df %>% 
+  filter(Sex == "m")
+
 ######################################################################
 # Data viz
 ######################################################################
 
 cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
           "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+plot_excess85b <- ggplot(dfb, mapping = aes(x=Week,y=excess85,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,250)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (85+ relative to 15-64, both sexes)")
+ggsave(plot_excess85b,height=8,width=12,dpi=200, filename="2.Figures/excess85b.pdf",  family = "Helvetica")
+
+plot_excess85f <- ggplot(dff, mapping = aes(x=Week,y=excess85,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,250)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (85+ relative to 15-64, female)")
+ggsave(plot_excess85f,height=8,width=12,dpi=200, filename="2.Figures/excess85f.pdf",  family = "Helvetica")
+
+plot_excess85m <- ggplot(dfm, mapping = aes(x=Week,y=excess85,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,250)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (85+ relative to 15-64, male)")
+ggsave(plot_excess85m,height=8,width=12,dpi=200, filename="2.Figures/excess85m.pdf",  family = "Helvetica")
+
+plot_excess75b <- ggplot(dfb, mapping = aes(x=Week,y=excess75,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,60)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (75-84 relative to 15-64, both sexes)")
+ggsave(plot_excess75b,height=8,width=12,dpi=200, filename="2.Figures/excess75b.pdf",  family = "Helvetica")
+
+plot_excess75f <- ggplot(dff, mapping = aes(x=Week,y=excess75,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,60)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (75-84 relative to 15-64, female)")
+ggsave(plot_excess75f,height=8,width=12,dpi=200, filename="2.Figures/excess75f.pdf",  family = "Helvetica")
+
+plot_excess75m <- ggplot(dfm, mapping = aes(x=Week,y=excess75,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,60)+
+  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
+  scale_colour_manual(values=cbp1)+
+  ggtitle("Weekly excess mortality ratios (75-84 relative to 15-64, male)")
+ggsave(plot_excess75m,height=8,width=12,dpi=200, filename="2.Figures/excess75m.pdf",  family = "Helvetica")
 
 plot_total <- ggplot(df, mapping = aes(x=Week,y=rt,group=Year,color=Year,shape=Year))+
   geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,30)+
@@ -98,19 +127,4 @@ plot_15 <- ggplot(df, mapping = aes(x=Week,y=r15,group=Year,color=Year,shape=Yea
   scale_colour_manual(values=rev(cbp1))+
   ggtitle("Weekly mortality rates in US, UK (England and Wales), Italy and Spain (15-64, both sexes)")
 ggsave(plot_15,height=8,width=12,dpi=200, filename="2.Figures/Age15-64.pdf",  family = "Helvetica")
-
-plot_excess85 <- ggplot(df, mapping = aes(x=Week,y=excess85,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,150)+
-  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
-  ggtitle("Weekly excess mortality ratios in US, UK, Italy and Spain (85+ relative to 15-64, both sexes)")
-ggsave(plot_excess85,height=8,width=12,dpi=200, filename="2.Figures/excess85.pdf",  family = "Helvetica")
-
-plot_excess75 <- ggplot(df, mapping = aes(x=Week,y=excess75,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Ratio of mortality rate")+ylim(0,50)+
-  theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
-  ggtitle("Weekly excess mortality ratios in US, UK, Italy, and Spain (75-84 relative to 15-64, both sexes)")
-ggsave(plot_excess75,height=8,width=12,dpi=200, filename="2.Figures/excess75.pdf",  family = "Helvetica")
-
 
