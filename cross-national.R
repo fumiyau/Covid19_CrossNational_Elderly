@@ -102,31 +102,31 @@ plot_excess75m <- ggplot(dfm, mapping = aes(x=Week,y=excess75,group=Year,color=Y
   ggtitle("Weekly excess mortality ratios (75-84 relative to 15-64, male)")
 ggsave(plot_excess75m,height=8,width=12,dpi=200, filename="Figures/excess75m.pdf",  family = "Helvetica")
 
-plot_total <- ggplot(df, mapping = aes(x=Week,y=rt,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,30)+
+plot_total <- ggplot(dfb, mapping = aes(x=Week,y=rt,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,30)+
   theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
+  scale_colour_manual(values=cbp1)+
   ggtitle("Weekly mortality rates in US, UK (England and Wales), Italy and Spain (all ages, both sexes)")
 ggsave(plot_total,height=8,width=12,dpi=200, filename="Figures/Total.pdf",  family = "Helvetica")
 
-plot_85 <- ggplot(df, mapping = aes(x=Week,y=r85,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,500)+
+plot_85 <- ggplot(dfb, mapping = aes(x=Week,y=r85,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,500)+
   theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
+  scale_colour_manual(values=cbp1)+
   ggtitle("Weekly mortality rates in US, UK (England and Wales), Italy and Spain (85+, both sexes)")
 ggsave(plot_85,height=8,width=12,dpi=200, filename="Figures/Age85+.pdf",  family = "Helvetica")
 
-plot_75 <- ggplot(df, mapping = aes(x=Week,y=r75,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,150)+
+plot_75 <- ggplot(dfb, mapping = aes(x=Week,y=r75,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,150)+
   theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
+  scale_colour_manual(values=cbp1)+
   ggtitle("Weekly mortality rates in US, UK (England and Wales), Italy and Spain (75-84, both sexes)")
 ggsave(plot_75,height=8,width=12,dpi=200, filename="Figures/Age75-84.pdf",  family = "Helvetica")
 
-plot_15 <- ggplot(df, mapping = aes(x=Week,y=r15,group=Year,color=Year,shape=Year))+
-  geom_point()+geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,10)+
+plot_15 <- ggplot(dfb, mapping = aes(x=Week,y=r15,group=Year,color=Year,shape=Year))+
+  geom_line()+facet_wrap(~Country)+xlab("Week")+ylab("Death per 1,000")+ylim(0,10)+
   theme_few() +theme(legend.title=element_blank(), legend.position = "bottom")+
-  scale_colour_manual(values=rev(cbp1))+
+  scale_colour_manual(values=cbp1)+
   ggtitle("Weekly mortality rates in US, UK (England and Wales), Italy and Spain (15-64, both sexes)")
 ggsave(plot_15,height=8,width=12,dpi=200, filename="Figures/Age15-64.pdf",  family = "Helvetica")
 
